@@ -13,8 +13,9 @@ typedef struct
 {
 	float x;
 	float y;
+	float originX;
+	float originY;
 	float scale;
-	float rotation;
 } cameraState_t;
 
 int main(int argc, char* args[])
@@ -34,7 +35,6 @@ int main(int argc, char* args[])
 	cameraState_t camera;
 	camera.x = camera.y = 0;
 	camera.scale = 1;
-	camera.rotation = 0;
 	
 	int cameraMoveBeginX, cameraMoveBeginY;
 	int mouseMoveBeginX, mouseMoveBeginY;
@@ -96,7 +96,9 @@ int main(int argc, char* args[])
 		ALLEGRO_TRANSFORM cameraMatrix;
 		al_identity_transform(&cameraMatrix);
 		
+		al_translate_transform(&cameraMatrix, -camera.originX, -camera.originY);
 		al_scale_transform(&cameraMatrix, camera.scale, camera.scale);
+		al_translate_transform(&cameraMatrix, camera.originX, camera.originY);
 		al_translate_transform(&cameraMatrix, -camera.x, -camera.y);		
 		
 		
