@@ -3,7 +3,7 @@
 
 #define SCREEN_WIDTH 640
 #define SCREEN_HEIGHT 480
-#define VIEWPORT_STEP 1
+#define VIEWPORT_STEP 2
 
 int main(int argc, char* args[])
 {
@@ -72,10 +72,10 @@ int main(int argc, char* args[])
 		}
 		
 		const Uint8* keyState = SDL_GetKeyboardState(NULL);
-		if (keyState[SDL_SCANCODE_LEFT]) viewport.x += VIEWPORT_STEP;
-		if (keyState[SDL_SCANCODE_RIGHT]) viewport.x -= VIEWPORT_STEP;
-		if (keyState[SDL_SCANCODE_UP]) viewport.y += VIEWPORT_STEP;
-		if (keyState[SDL_SCANCODE_DOWN]) viewport.y -= VIEWPORT_STEP;
+		if (keyState[SDL_SCANCODE_A]) viewport.x += VIEWPORT_STEP;
+		if (keyState[SDL_SCANCODE_D]) viewport.x -= VIEWPORT_STEP;
+		if (keyState[SDL_SCANCODE_W]) viewport.y += VIEWPORT_STEP;
+		if (keyState[SDL_SCANCODE_S]) viewport.y -= VIEWPORT_STEP;
 		
 		SDL_RenderSetViewport(renderer, &viewport);
 		
