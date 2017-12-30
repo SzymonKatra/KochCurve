@@ -1,105 +1,119 @@
-#include <SDL.h>
 #include <stdio.h>
+#include <allegro5/allegro.h>
+#include <allegro5/allegro_primitives.h>
 
 #define SCREEN_WIDTH 640
 #define SCREEN_HEIGHT 480
-#define VIEWPORT_STEP 2
+#define CAMERA_STEP 0.1
+#define CAMERA_SCALE_STEP 0.01
 
-double testasm(double a, double b, double* r);
+int testasm(double a, double b);
+
+typedef struct
+{
+	float x;
+	float y;
+	float scale;
+	float rotation;
+} cameraState_t;
 
 int main(int argc, char* args[])
 {
-	int pointsCount;
-	SDL_Point points[100];
+	al_init();
+	al_init_primitives_addon();
 	
-	double r;
-	testasm(4.0, 8.0, &r);
-	printf("%lf", r);
-
-	printf("Enter number of points: ");
-	scanf("%d", &pointsCount);
-	for (int i = 0; i < pointsCount; i++)
+	al_install_keyboard();
+	al_install_mouse();
+	
+	ALLEGRO_DISPLAY* display = al_create_display(SCREEN_WIDTH, SCREEN_HEIGHT);
+	ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
+	al_register_event_source(queue, al_get_mouse_event_source());
+	ALLEGRO_COLOR white = al_map_rgba(255, 255, 255, 255);
+	ALLEGRO_COLOR black = al_map_rgba(0, 0, 0, 255);
+	
+	cameraState_t camera;
+	camera.x = camera.y = 0;
+	camera.scale = 1;
+	camera.rotation = 0;
+	
+	int cameraMoveBeginX, cameraMoveBeginY;
+	int mouseMoveBeginX, mouseMoveBeginY;
+	int moving = 0;
+	
+	while (1)
 	{
-		printf("Enter #%d point: ", i + 1);
-		scanf("%d %d", &points[i].x, &points[i].y);
-	}
-	
-	if (SDL_Init(SDL_INIT_VIDEO) < 0)
-	{
-		printf("SDL_Init error: %s\n", SDL_GetError());
-		return -1;
-	}
-	
-	printf("SDL_Init success\n");
-	
-	SDL_Window* window = SDL_CreateWindow("Koch curve", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
-	if (window == NULL)
-	{
-		printf("SDL_CreateWindow error: %s\n", SDL_GetError());
-		return -1;
-	}
-	
-	printf("SDL_CreateWindow success\n");
-	
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
-	if (renderer == NULL)
-	{
-		printf("SDL_CreateRenderer error: %s\n", SDL_GetError());
-		return -1;
-	}
-	
-	printf("SDL_CreateRenderer success\n");
-	
-	SDL_Rect viewport;
-	viewport.x = 0;
-	viewport.y = 0;
-	viewport.w = SCREEN_WIDTH;
-	viewport.h = SCREEN_HEIGHT;
-	
-	int running = 1;
-	while (running)
-	{
-		SDL_Event event;
-		while (SDL_PollEvent(&event))
+		ALLEGRO_EVENT event;
+		while (al_get_next_event(queue, &event))
 		{
-			switch (event.type)
+			if (event.type == ALLEGRO_EVENT_MOUSE_AXES)
 			{
-				case SDL_WINDOWEVENT:
-					if (event.window.event == SDL_WINDOWEVENT_CLOSE)
-					{
-						running = 0;
-					}
-					break;
+				if (event.mouse.dz != 0 && !moving)
+				{
+					camera.x = (event.mouse.x - SCREEN_WIDTH / 2) / camera.scale;
+					camera.y = (event.mouse.y - SCREEN_HEIGHT / 2) / camera.scale;
 					
-				case SDL_QUIT:
-					running = 0;
-					break;
+					double delta = event.mouse.dz;
+					delta /= 10;
+					camera.scale += delta;
+					
+					if (camera.scale < 0.1) camera.scale = 0.1;
+					
+					
+				}
+			}
+			else if (event.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
+			{
+				cameraMoveBeginX = camera.x;
+				cameraMoveBeginY = camera.y;
+				mouseMoveBeginX = event.mouse.x;
+				mouseMoveBeginY = event.mouse.y;
+				moving = 1;
+			}
+			else if (event.type == ALLEGRO_EVENT_MOUSE_BUTTON_UP)
+			{
+				double deltaX = mouseMoveBeginX - event.mouse.x;
+				double deltaY = mouseMoveBeginY - event.mouse.y;
+				
+				camera.x = cameraMoveBeginX + deltaX;
+				camera.y = cameraMoveBeginY + deltaY;
+				moving = 0;
 			}
 		}
 		
-		const Uint8* keyState = SDL_GetKeyboardState(NULL);
-		if (keyState[SDL_SCANCODE_A]) viewport.x += VIEWPORT_STEP;
-		if (keyState[SDL_SCANCODE_D]) viewport.x -= VIEWPORT_STEP;
-		if (keyState[SDL_SCANCODE_W]) viewport.y += VIEWPORT_STEP;
-		if (keyState[SDL_SCANCODE_S]) viewport.y -= VIEWPORT_STEP;
+		ALLEGRO_KEYBOARD_STATE keyboardState;
+		ALLEGRO_MOUSE_STATE mouseState;
+		al_get_keyboard_state(&keyboardState);
+		al_get_mouse_state(&mouseState);
+		if (moving)
+		{
+			double deltaX = mouseMoveBeginX - mouseState.x;
+			double deltaY = mouseMoveBeginY - mouseState.y;
+				
+			camera.x = cameraMoveBeginX + deltaX;
+			camera.y = cameraMoveBeginY + deltaY;
+		}
 		
-		SDL_RenderSetViewport(renderer, &viewport);
+		ALLEGRO_TRANSFORM cameraMatrix;
+		al_identity_transform(&cameraMatrix);
 		
-		SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-		SDL_RenderClear(renderer);
+		al_scale_transform(&cameraMatrix, camera.scale, camera.scale);
+		al_translate_transform(&cameraMatrix, -camera.x, -camera.y);		
 		
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-		SDL_RenderDrawLines(renderer, points, pointsCount);
 		
-		SDL_RenderPresent(renderer);
+		al_use_transform(&cameraMatrix);
+		
+		al_clear_to_color(white);
+	
+		al_draw_line(0, 0, 300, 600, black, 1 / camera.scale);
+		al_draw_line(300, 600, -300, 600, black, 1 / camera.scale);
+		al_draw_line(-300, 600, 0, 0, black, 1 / camera.scale);
+		
+		al_wait_for_vsync();
+		al_flip_display();
 	}
 	
-	SDL_DestroyRenderer(renderer);
-	renderer = NULL;
-	SDL_DestroyWindow(window);
-	window = NULL;
-	
-	SDL_Quit();
+	al_destroy_event_queue(queue);
+	al_destroy_display(display);
 	
 	return 0;
 }
