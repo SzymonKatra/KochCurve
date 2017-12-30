@@ -5,10 +5,16 @@
 #define SCREEN_HEIGHT 480
 #define VIEWPORT_STEP 2
 
+double testasm(double a, double b, double* r);
+
 int main(int argc, char* args[])
 {
 	int pointsCount;
 	SDL_Point points[100];
+	
+	double r;
+	testasm(4.0, 8.0, &r);
+	printf("%lf", r);
 
 	printf("Enter number of points: ");
 	scanf("%d", &pointsCount);
