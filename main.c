@@ -62,41 +62,12 @@ int main(int argc, char* args[])
 			{
 				if (event.mouse.dz != 0 && !moving)
 				{
-					//float prevX, newX = event.mouse.x;
-					//float prevY, newY = event.mouse.y;
-					
-					//ALLEGRO_TRANSFORM transform;
-					//computeCamera(&camera, &transform);
-					//al_invert_transform(&transform);
-					//al_transform_coordinates(&transform, &prevX, &prevY);
-					
-					//ALLEGRO_TRANSFORM inv;
-					//al_copy_transform(&inv, &cameraMatrix);
-					//al_invert_transform(&inv);
-					
-					//camera.originX = event.mouse.x;
-					//camera.originY = event.mouse.y;
-					
-					//al_transform_coordinates(&inv, &camera.originX, &camera.originY);
-					
-					camera.originX += (event.mouse.x - camera.originX) / camera.scale;
-					camera.originY += (event.mouse.y - camera.originY) / camera.scale;
-					
 					double delta = event.mouse.dz;
 					delta /= 10;
 					camera.scale += delta;
 					
 					if (camera.scale < 0.1) camera.scale = 0.1;
 					if (camera.scale > 5) camera.scale = 5;
-					
-					
-					
-					//computeCamera(&camera, &transform);
-					//al_invert_transform(&transform);
-					//al_transform_coordinates(&transform, &newX, &newY);
-					
-					//camera.originX += prevX - newX;
-					//camera.originY += prevY - newY;
 				}
 			}
 			else if (event.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
