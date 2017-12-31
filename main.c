@@ -18,6 +18,17 @@ typedef struct
 	float scale;
 } cameraState_t;
 
+void computeCamera(const cameraState_t* camera, ALLEGRO_TRANSFORM* matrix)
+{
+	al_identity_transform(matrix);
+		
+	al_translate_transform(matrix, -camera->originX, -camera->originY);
+	al_scale_transform(matrix, camera->scale, camera->scale);
+	al_translate_transform(matrix, camera->originX, camera->originY);
+		
+	al_translate_transform(matrix, -camera->x, -camera->y);
+}
+
 int main(int argc, char* args[])
 {
 	al_init();
@@ -33,12 +44,14 @@ int main(int argc, char* args[])
 	ALLEGRO_COLOR black = al_map_rgba(0, 0, 0, 255);
 	
 	cameraState_t camera;
-	camera.x = camera.y = 0;
+	camera.x = camera.y = camera.originX = camera.originY = 0;
 	camera.scale = 1;
 	
 	int cameraMoveBeginX, cameraMoveBeginY;
 	int mouseMoveBeginX, mouseMoveBeginY;
 	int moving = 0;
+	
+	
 	
 	while (1)
 	{
@@ -49,16 +62,41 @@ int main(int argc, char* args[])
 			{
 				if (event.mouse.dz != 0 && !moving)
 				{
-					camera.x = (event.mouse.x - SCREEN_WIDTH / 2) / camera.scale;
-					camera.y = (event.mouse.y - SCREEN_HEIGHT / 2) / camera.scale;
+					//float prevX, newX = event.mouse.x;
+					//float prevY, newY = event.mouse.y;
+					
+					//ALLEGRO_TRANSFORM transform;
+					//computeCamera(&camera, &transform);
+					//al_invert_transform(&transform);
+					//al_transform_coordinates(&transform, &prevX, &prevY);
+					
+					//ALLEGRO_TRANSFORM inv;
+					//al_copy_transform(&inv, &cameraMatrix);
+					//al_invert_transform(&inv);
+					
+					//camera.originX = event.mouse.x;
+					//camera.originY = event.mouse.y;
+					
+					//al_transform_coordinates(&inv, &camera.originX, &camera.originY);
+					
+					camera.originX += (event.mouse.x - camera.originX) / camera.scale;
+					camera.originY += (event.mouse.y - camera.originY) / camera.scale;
 					
 					double delta = event.mouse.dz;
 					delta /= 10;
 					camera.scale += delta;
 					
 					if (camera.scale < 0.1) camera.scale = 0.1;
+					if (camera.scale > 5) camera.scale = 5;
 					
 					
+					
+					//computeCamera(&camera, &transform);
+					//al_invert_transform(&transform);
+					//al_transform_coordinates(&transform, &newX, &newY);
+					
+					//camera.originX += prevX - newX;
+					//camera.originY += prevY - newY;
 				}
 			}
 			else if (event.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
@@ -94,21 +132,15 @@ int main(int argc, char* args[])
 		}
 		
 		ALLEGRO_TRANSFORM cameraMatrix;
-		al_identity_transform(&cameraMatrix);
-		
-		al_translate_transform(&cameraMatrix, -camera.originX, -camera.originY);
-		al_scale_transform(&cameraMatrix, camera.scale, camera.scale);
-		al_translate_transform(&cameraMatrix, camera.originX, camera.originY);
-		al_translate_transform(&cameraMatrix, -camera.x, -camera.y);		
-		
-		
+		computeCamera(&camera, &cameraMatrix);
 		al_use_transform(&cameraMatrix);
 		
 		al_clear_to_color(white);
 	
-		al_draw_line(0, 0, 300, 600, black, 1 / camera.scale);
-		al_draw_line(300, 600, -300, 600, black, 1 / camera.scale);
-		al_draw_line(-300, 600, 0, 0, black, 1 / camera.scale);
+		double thickness = 2;
+		al_draw_line(0, 0, 300, 600, black, thickness);
+		al_draw_line(300, 600, -300, 600, black, thickness);
+		al_draw_line(-300, 600, 0, 0, black, thickness);
 		
 		al_wait_for_vsync();
 		al_flip_display();
