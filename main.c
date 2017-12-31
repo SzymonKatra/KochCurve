@@ -7,7 +7,7 @@
 #define CAMERA_STEP 0.1
 #define CAMERA_SCALE_STEP 0.01
 
-int testasm(double a, double b);
+void koch(float* input, float* output, int count);
 
 typedef struct
 {
@@ -31,6 +31,12 @@ void computeCamera(const cameraState_t* camera, ALLEGRO_TRANSFORM* matrix)
 
 int main(int argc, char* args[])
 {
+	float in[4] = { 5.0, 8.0, 13.0, 20.0 };
+	float out[4];
+	koch(in, out, 0);
+	printf("%f %f %f %f", out[0], out[1], out[2], out[3]);
+	return 0;
+	
 	al_init();
 	al_init_primitives_addon();
 	
@@ -88,8 +94,8 @@ int main(int argc, char* args[])
 					//camera.x += newX - prevX;
 					//camera.y += newY - prevY;
 					
-					camera.originX = prevX;
-					camera.originY = prevY;
+					camera.originX += newX - prevX;
+					camera.originY += newY - prevY;
 				}
 			}
 			else if (event.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
