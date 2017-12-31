@@ -59,11 +59,11 @@ int main(int argc, char* args[])
 	int moving = 0;
 	int pointsCount = 4;
 	point_t* points = malloc(sizeof(point_t) * pointsCount);
-	points[0].x = -300;
+	points[0].x = -100;
 	points[0].y = 0;
 	points[1].x = 0;
-	points[1].y = 600;
-	points[2].x = 300;
+	points[1].y = 200;
+	points[2].x = 100;
 	points[2].y = 0;
 	points[3] = points[0];
 	
@@ -75,35 +75,34 @@ int main(int argc, char* args[])
 			if (event.type == ALLEGRO_EVENT_MOUSE_AXES)
 			{
 				if (event.mouse.dz != 0 && !moving)
-				{
-					float prevX, newX;
-					prevX = newX = event.mouse.x;
-					float prevY, newY;
-					prevY = newY = event.mouse.y;		
+				{	
 					ALLEGRO_TRANSFORM transform;
 					
 					computeCamera(&camera, &transform);
 					al_invert_transform(&transform);
-					al_transform_coordinates(&transform, &prevX, &prevY);
 					
-					//printf("%f %f %f %f %f\n", camera.x, camera.y, camera.originX, camera.originY, camera.scale);
-					printf("%f %f\n", prevX, prevY);
+					float worldX = event.mouse.x;
+					float worldY = event.mouse.y;
+					al_transform_coordinates(&transform, &worldX, &worldY);
+					
+					camera.originX = worldX;
+					camera.originY = worldY;
+					
 					float delta = event.mouse.dz;
 					delta /= 10;
 					camera.scale += delta;
 					
 					if (camera.scale < 0.1) camera.scale = 0.1;
-					//if (camera.scale > 5) camera.scale = 5;
 					
 					computeCamera(&camera, &transform);
 					al_invert_transform(&transform);
-					al_transform_coordinates(&transform, &newX, &newY);
 					
-					//camera.x += newX - prevX;
-					//camera.y += newY - prevY;
+					float newWorldX = event.mouse.x;
+					float newWorldY = event.mouse.y;
+					al_transform_coordinates(&transform, &newWorldX, &newWorldY);
 					
-					camera.originX += newX - prevX;
-					camera.originY += newY - prevY;
+					camera.x += (worldX - newWorldX) * camera.scale;
+					camera.y += (worldY - newWorldY) * camera.scale;
 				}
 			}
 			else if (event.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
@@ -156,20 +155,24 @@ int main(int argc, char* args[])
 		al_use_transform(&cameraMatrix);
 		
 		al_clear_to_color(white);
-	
+		
 		float thickness = 1 / camera.scale;
 		for (int i = 0; i < pointsCount - 1; i++)
 		{
-			float x1, y1, x2, y2;
+			/*float x1 = points[i].x;
+			float y1 = points[i].y;
+			float x2 = points[i + 1].x;
+			float y2 = points[i + 1].y;
 			al_transform_coordinates(&cameraMatrix, &x1, &y1);
-			al_transform_coordinates(&cameraMatrix, &x2, &y2);
+			al_transform_coordinates(&cameraMatrix, &x2, &y2);	
 			
+			// check bounds
 			int x1Out = x1 < 0 || x1 > SCREEN_WIDTH;
 			int y1Out = y1 < 0 || y1 > SCREEN_HEIGHT;
 			int x2Out = x2 < 0 || x2 > SCREEN_WIDTH;
 			int y2Out = y2 < 0 || y2 > SCREEN_HEIGHT;
 			
-			if (x1Out && y1Out && x2Out && y2Out) continue; // don't draw things not covered by camera
+			if (x1Out && y1Out && x2Out && y2Out) continue; // don't draw things for sure not covered by camera*/
 			
 			al_draw_line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y, black, thickness);
 		}
