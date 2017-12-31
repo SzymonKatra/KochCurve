@@ -62,12 +62,34 @@ int main(int argc, char* args[])
 			{
 				if (event.mouse.dz != 0 && !moving)
 				{
+					float prevX, newX;
+					prevX = newX = event.mouse.x;
+					float prevY, newY;
+					prevY = newY = event.mouse.y;		
+					ALLEGRO_TRANSFORM transform;
+					
+					computeCamera(&camera, &transform);
+					al_invert_transform(&transform);
+					al_transform_coordinates(&transform, &prevX, &prevY);
+					
+					//printf("%f %f %f %f %f\n", camera.x, camera.y, camera.originX, camera.originY, camera.scale);
+					printf("%f %f\n", prevX, prevY);
 					double delta = event.mouse.dz;
 					delta /= 10;
 					camera.scale += delta;
 					
 					if (camera.scale < 0.1) camera.scale = 0.1;
 					if (camera.scale > 5) camera.scale = 5;
+					
+					computeCamera(&camera, &transform);
+					al_invert_transform(&transform);
+					al_transform_coordinates(&transform, &newX, &newY);
+					
+					//camera.x += newX - prevX;
+					//camera.y += newY - prevY;
+					
+					camera.originX = prevX;
+					camera.originY = prevY;
 				}
 			}
 			else if (event.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
