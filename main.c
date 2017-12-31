@@ -7,8 +7,6 @@
 #define CAMERA_STEP 0.1
 #define CAMERA_SCALE_STEP 0.01
 
-void koch(float* input, float* output, int count);
-
 typedef struct
 {
 	float x;
@@ -17,6 +15,14 @@ typedef struct
 	float originY;
 	float scale;
 } cameraState_t;
+
+typedef struct
+{
+	float x;
+	float y;
+} point_t;
+
+void koch(point_t* input, point_t* output, int count);
 
 void computeCamera(const cameraState_t* camera, ALLEGRO_TRANSFORM* matrix)
 {
@@ -31,12 +37,6 @@ void computeCamera(const cameraState_t* camera, ALLEGRO_TRANSFORM* matrix)
 
 int main(int argc, char* args[])
 {
-	float in[4] = { 5.0, 8.0, 13.0, 20.0 };
-	float out[4];
-	koch(in, out, 0);
-	printf("%f %f %f %f", out[0], out[1], out[2], out[3]);
-	return 0;
-	
 	al_init();
 	al_init_primitives_addon();
 	
@@ -46,6 +46,7 @@ int main(int argc, char* args[])
 	ALLEGRO_DISPLAY* display = al_create_display(SCREEN_WIDTH, SCREEN_HEIGHT);
 	ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
 	al_register_event_source(queue, al_get_mouse_event_source());
+	al_register_event_source(queue, al_get_keyboard_event_source());
 	ALLEGRO_COLOR white = al_map_rgba(255, 255, 255, 255);
 	ALLEGRO_COLOR black = al_map_rgba(0, 0, 0, 255);
 	
@@ -56,8 +57,15 @@ int main(int argc, char* args[])
 	int cameraMoveBeginX, cameraMoveBeginY;
 	int mouseMoveBeginX, mouseMoveBeginY;
 	int moving = 0;
-	
-	
+	int pointsCount = 4;
+	point_t* points = malloc(sizeof(point_t) * pointsCount);
+	points[0].x = -300;
+	points[0].y = 0;
+	points[1].x = 0;
+	points[1].y = 600;
+	points[2].x = 300;
+	points[2].y = 0;
+	points[3] = points[0];
 	
 	while (1)
 	{
@@ -80,12 +88,12 @@ int main(int argc, char* args[])
 					
 					//printf("%f %f %f %f %f\n", camera.x, camera.y, camera.originX, camera.originY, camera.scale);
 					printf("%f %f\n", prevX, prevY);
-					double delta = event.mouse.dz;
+					float delta = event.mouse.dz;
 					delta /= 10;
 					camera.scale += delta;
 					
 					if (camera.scale < 0.1) camera.scale = 0.1;
-					if (camera.scale > 5) camera.scale = 5;
+					//if (camera.scale > 5) camera.scale = 5;
 					
 					computeCamera(&camera, &transform);
 					al_invert_transform(&transform);
@@ -108,12 +116,25 @@ int main(int argc, char* args[])
 			}
 			else if (event.type == ALLEGRO_EVENT_MOUSE_BUTTON_UP)
 			{
-				double deltaX = mouseMoveBeginX - event.mouse.x;
-				double deltaY = mouseMoveBeginY - event.mouse.y;
+				float deltaX = mouseMoveBeginX - event.mouse.x;
+				float deltaY = mouseMoveBeginY - event.mouse.y;
 				
 				camera.x = cameraMoveBeginX + deltaX;
 				camera.y = cameraMoveBeginY + deltaY;
 				moving = 0;
+			}
+			else if (event.type == ALLEGRO_EVENT_KEY_DOWN)
+			{
+				if (event.keyboard.keycode == ALLEGRO_KEY_SPACE)
+				{
+					int newPointsCount = (pointsCount - 1) * 4 + 1;
+					point_t* newPoints = malloc(sizeof(point_t) * newPointsCount);
+					koch(points, newPoints, pointsCount);
+					
+					free(points);
+					points = newPoints;
+					pointsCount = newPointsCount;
+				}
 			}
 		}
 		
@@ -123,8 +144,8 @@ int main(int argc, char* args[])
 		al_get_mouse_state(&mouseState);
 		if (moving)
 		{
-			double deltaX = mouseMoveBeginX - mouseState.x;
-			double deltaY = mouseMoveBeginY - mouseState.y;
+			float deltaX = mouseMoveBeginX - mouseState.x;
+			float deltaY = mouseMoveBeginY - mouseState.y;
 				
 			camera.x = cameraMoveBeginX + deltaX;
 			camera.y = cameraMoveBeginY + deltaY;
@@ -136,10 +157,22 @@ int main(int argc, char* args[])
 		
 		al_clear_to_color(white);
 	
-		double thickness = 2;
-		al_draw_line(0, 0, 300, 600, black, thickness);
-		al_draw_line(300, 600, -300, 600, black, thickness);
-		al_draw_line(-300, 600, 0, 0, black, thickness);
+		float thickness = 1 / camera.scale;
+		for (int i = 0; i < pointsCount - 1; i++)
+		{
+			float x1, y1, x2, y2;
+			al_transform_coordinates(&cameraMatrix, &x1, &y1);
+			al_transform_coordinates(&cameraMatrix, &x2, &y2);
+			
+			int x1Out = x1 < 0 || x1 > SCREEN_WIDTH;
+			int y1Out = y1 < 0 || y1 > SCREEN_HEIGHT;
+			int x2Out = x2 < 0 || x2 > SCREEN_WIDTH;
+			int y2Out = y2 < 0 || y2 > SCREEN_HEIGHT;
+			
+			if (x1Out && y1Out && x2Out && y2Out) continue; // don't draw things not covered by camera
+			
+			al_draw_line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y, black, thickness);
+		}
 		
 		al_wait_for_vsync();
 		al_flip_display();
