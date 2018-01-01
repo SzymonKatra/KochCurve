@@ -30,7 +30,8 @@ koch:
 										; A___P/    \R___B
 										;
 										; U = [Bx - Ax, By - Ay]
-										; V = [Ay - By, Bx - Ax]
+										;;;;;;;;; V = [Ay - By, Bx - Ax]
+										; V = [By - Ay, Ax - Bx]
 										; P = A + (1/3) * U
 										; Q = A + (1/2) * U + (sqrt(3) / 6) * V
 										; R = A + (2/3) * U
@@ -44,15 +45,14 @@ koch:
 koch_loop:
 										; --- COMPUTE U AND V ---
 				movlps	xmm0, [esi + 8] ; move Bx, By to low part of xmm0
-				movhps	xmm0, [esi + 4] ; move Ay, Bx to high part of xmm0
-				
-				movlps	xmm1, [esi]		; move Ax, Ay to low part of xmm1
-				
 				mov		eax, [esi + 12] ; store temporarily By in eax
 				mov		[VAR_TMP8], eax ; move By to temp buffer
 				mov		eax, [esi]		; store temporarily Ax in eax
 				mov		[VAR_TMP8 + 4], eax ; move Ax into temp buffer
-				movhps	xmm1, [VAR_TMP8]; move By, Ax to high part of xmm1
+				movhps	xmm0, [VAR_TMP8] ; Move By, Ax to high part of xmm0
+				
+				movlps	xmm1, [esi]		; move Ax, Ay to low part of xmm1
+				movhps	xmm1, [esi + 4]	; move Ay, Bx to high part of xmm1
 				
 				subps	xmm0, xmm1		; compute U and V values
 										; xmm0 - (low) [Ux, Uy, Vx, Vy] (high)
