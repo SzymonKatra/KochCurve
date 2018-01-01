@@ -24,16 +24,18 @@ typedef struct
 	float y;
 } point_t;
 
-void koch(point_t* input, point_t* output, int count); // koch.asm
+void koch(point_t* output, point_t* input, int count); // koch.asm
 
 void initAll();
 void freeAll();
-void zoomAt(int x, int y, int value);
+void processEvents();
+void zoomAt(int mouseX, int mouseY, int value);
 void startMoving(int mouseX, int mouseY);
 void move(int mouseX, int mouseY);
 void endMoving(int mouseX, int mouseY);
 void makeKochStep();
 void appendPoint(int x, int y);
+void applyDefaultCurve();
 
 void initCamera(cameraState_t* camera);
 void computeCamera(const cameraState_t* camera, ALLEGRO_TRANSFORM* matrix);
@@ -56,60 +58,17 @@ point_t screenBounds[4];
 int running;
 int drawing;
 
-int main(int argc, char* args[])
+int main(int argc, char** argv)
 {
 	initAll();
 	
 	while (running)
 	{
-		ALLEGRO_EVENT event;
-		while (al_get_next_event(queue, &event))
-		{
-			switch (event.type)
-			{
-				case ALLEGRO_EVENT_MOUSE_AXES: zoomAt(event.mouse.x, event.mouse.y, event.mouse.dz); break;
-				
-				case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
-					switch (event.mouse.button)
-					{
-						case 1: startMoving(event.mouse.x, event.mouse.y); break;
-						case 2: if (drawing) appendPoint(event.mouse.x, event.mouse.y); break;
-					}	
-					break;
-					
-				case ALLEGRO_EVENT_MOUSE_BUTTON_UP:
-					switch (event.mouse.button)
-					{
-						case 1: endMoving(event.mouse.x, event.mouse.y); break;
-					}	
-					break;
-					
-				case ALLEGRO_EVENT_KEY_DOWN:
-					switch (event.keyboard.keycode)
-					{
-						case ALLEGRO_KEY_SPACE:
-							if (!drawing)
-							{
-								makeKochStep();
-							}
-							else if (pointsCount > 1)
-							{
-								appendPoint(points[0].x, points[0].y);
-								drawing = 0;
-							}
-							break;
-						case ALLEGRO_KEY_ESCAPE: running = 0; break;
-					}
-					break;
-			}
-		}
+		processEvents();
 		
 		ALLEGRO_MOUSE_STATE mouseState;
 		al_get_mouse_state(&mouseState);
-		if (moving)
-		{
-			move(mouseState.x, mouseState.y);
-		}
+		if (moving) move(mouseState.x, mouseState.y);
 		
 		ALLEGRO_TRANSFORM cameraMatrix;
 		
@@ -181,13 +140,6 @@ void initAll()
 	kochStep = 0;
 	pointsCount = 0;
 	points = (point_t*)malloc(0);
-	points[0].x = -100;
-	points[0].y = 0;
-	//points[1].x = 0;
-	//points[1].y = 200;
-	//points[2].x = 100;
-	//points[2].y = 0;
-	//points[3] = points[0];
 	
 	screenBounds[0].x = 0;
 	screenBounds[0].y = 0;
@@ -210,21 +162,66 @@ void freeAll()
 	al_destroy_display(display);
 }
 
-void zoomAt(int x, int y, int value)
+void processEvents()
+{
+	ALLEGRO_EVENT event;
+	while (al_get_next_event(queue, &event))
+	{
+		switch (event.type)
+		{
+			case ALLEGRO_EVENT_MOUSE_AXES: zoomAt(event.mouse.x, event.mouse.y, event.mouse.dz); break;
+				
+			case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
+				switch (event.mouse.button)
+				{
+					case 1: startMoving(event.mouse.x, event.mouse.y); break;
+					case 2: if (drawing)
+							{
+								point_t world = mouseToWorld(event.mouse.x, event.mouse.y);
+								appendPoint(world.x, world.y);
+							}
+							break;
+				}	
+				break;
+					
+			case ALLEGRO_EVENT_MOUSE_BUTTON_UP:
+				switch (event.mouse.button)
+				{
+					case 1: endMoving(event.mouse.x, event.mouse.y); break;
+				}	
+				break;
+				
+			case ALLEGRO_EVENT_KEY_DOWN:
+				switch (event.keyboard.keycode)
+				{
+					case ALLEGRO_KEY_SPACE:
+						if (!drawing)
+						{
+							makeKochStep();
+						}
+						else
+						{
+							if (pointsCount > 1)
+								appendPoint(points[0].x, points[0].y);
+							else applyDefaultCurve();
+							drawing = 0;
+						}
+						break;
+					case ALLEGRO_KEY_ESCAPE: running = 0; break;
+				}
+				break;
+		}
+	}
+}
+
+void zoomAt(int mouseX, int mouseY, int value)
 {
 	if (value == 0 || moving) return;
 	
-	ALLEGRO_TRANSFORM transform;
+	point_t world = mouseToWorld(mouseX, mouseY);
 					
-	computeCamera(&camera, &transform);
-	al_invert_transform(&transform);
-					
-	float worldX = x;
-	float worldY = y;
-	al_transform_coordinates(&transform, &worldX, &worldY);
-					
-	camera.originX = worldX;
-	camera.originY = worldY;
+	camera.originX = world.x;
+	camera.originY = world.y;
 					
 	float delta = value;
 	if (camera.scale < 9.9f) delta /= 5;
@@ -234,15 +231,10 @@ void zoomAt(int x, int y, int value)
 					
 	if (camera.scale < 0.1f) camera.scale = 0.1f;
 					
-	computeCamera(&camera, &transform);
-	al_invert_transform(&transform);
+	point_t newWorld = mouseToWorld(mouseX, mouseY);
 					
-	float newWorldX = x;
-	float newWorldY = y;
-	al_transform_coordinates(&transform, &newWorldX, &newWorldY);
-					
-	camera.x += (worldX - newWorldX) * camera.scale;
-	camera.y += (worldY - newWorldY) * camera.scale;
+	camera.x += (world.x - newWorld.x) * camera.scale;
+	camera.y += (world.y - newWorld.y) * camera.scale;
 }
 
 void startMoving(int mouseX, int mouseY)
@@ -273,7 +265,7 @@ void makeKochStep()
 {
 	int newPointsCount = (pointsCount - 1) * 4 + 1;
 	point_t* newPoints = malloc(sizeof(point_t) * newPointsCount);
-	koch(points, newPoints, pointsCount);
+	koch(newPoints, points, pointsCount);
 					
 	free(points);
 	points = newPoints;
@@ -282,14 +274,25 @@ void makeKochStep()
 	kochStep++;
 }
 
-void appendPoint(int mouseX, int mouseY)
+void appendPoint(int x, int y)
 {
-	point_t world = mouseToWorld(mouseX, mouseY);
-	
 	pointsCount++;
 	points = (point_t*)realloc(points, sizeof(point_t) * pointsCount);
-	points[pointsCount - 1].x = world.x;
-	points[pointsCount - 1].y = world.y;
+	points[pointsCount - 1].x = x;
+	points[pointsCount - 1].y = y;
+}
+
+void applyDefaultCurve()
+{
+	pointsCount = 4;
+	points = (point_t*)realloc(points, sizeof(point_t) * pointsCount);
+	points[0].x = 170;
+	points[0].y = 150;
+	points[1].x = 470;
+	points[1].y = 150;
+	points[2].x = 320;
+	points[2].y = 410;
+	points[3] = points[0];
 }
 
 void initCamera(cameraState_t* camera)
