@@ -34,6 +34,7 @@ void startMoving(int mouseX, int mouseY);
 void move(int mouseX, int mouseY);
 void endMoving(int mouseX, int mouseY);
 void makeKochStep();
+void undoKochStep();
 void appendPoint(int x, int y);
 void applyDefaultCurve();
 
@@ -99,11 +100,32 @@ int main(int argc, char** argv)
 		computeCamera(&hudCamera, &cameraMatrix);
 		al_use_transform(&cameraMatrix);
 		
-		char buffer[128];
-		sprintf(buffer, "Step: %d", kochStep);
-		al_draw_text(font, black, 5, 5, ALLEGRO_ALIGN_LEFT, buffer);
-		sprintf(buffer, "Zoom: %.1f", camera.scale);
-		al_draw_text(font, black, 5, 25, ALLEGRO_ALIGN_LEFT, buffer);
+		if (!drawing)
+		{
+			char buffer[128];
+			sprintf(buffer, "Step: %d", kochStep);
+			al_draw_text(font, black, 5, 5, ALLEGRO_ALIGN_LEFT, buffer);
+			sprintf(buffer, "Zoom: %.1f", camera.scale);
+			al_draw_text(font, black, 5, 25, ALLEGRO_ALIGN_LEFT, buffer);
+		}
+		else 
+		{
+			if (pointsCount == 0)
+			{
+				al_draw_text(font, black, 5, 5, ALLEGRO_ALIGN_LEFT,  "ESC          - exit");
+				al_draw_text(font, black, 5, 25, ALLEGRO_ALIGN_LEFT, "SPACE        - make step of koch curve");
+				al_draw_text(font, black, 5, 45, ALLEGRO_ALIGN_LEFT, "BACKSPACE    - undo step of koch curve");
+				al_draw_text(font, black, 5, 65, ALLEGRO_ALIGN_LEFT, "Drag & drop with left mouse button");
+				al_draw_text(font, black, 5, 85, ALLEGRO_ALIGN_LEFT, "             - change position of camera");
+				al_draw_text(font, black, 5, 105, ALLEGRO_ALIGN_LEFT, "Mouse scroll - change zoom");
+				al_draw_text(font, red, SCREEN_WIDTH / 2, 205, ALLEGRO_ALIGN_CENTER, "To begin, click right mouse button and start drawing");
+				al_draw_text(font, red, SCREEN_WIDTH / 2, 225, ALLEGRO_ALIGN_CENTER, "initial curve or press SPACE to draw default one.");
+			}
+			else
+			{
+				al_draw_text(font, black, 5, 5, ALLEGRO_ALIGN_LEFT, "Press SPACE to finish drawing");
+			}
+		}
 		
 		al_wait_for_vsync();
 		al_flip_display();
@@ -207,6 +229,9 @@ void processEvents()
 							drawing = 0;
 						}
 						break;
+						
+					case ALLEGRO_KEY_BACKSPACE: if (!drawing) undoKochStep(); break;
+						
 					case ALLEGRO_KEY_ESCAPE: running = 0; break;
 				}
 				break;
@@ -272,6 +297,25 @@ void makeKochStep()
 	pointsCount = newPointsCount;
 					
 	kochStep++;
+}
+
+void undoKochStep()
+{
+	if (kochStep == 0) return;
+	
+	int newPointsCount = (pointsCount - 1) / 4 + 1;
+	point_t* newPoints = malloc(sizeof(point_t) * newPointsCount);
+
+	for (int i = 0; i < newPointsCount; i++)
+	{
+		newPoints[i] = points[i * 4];
+	}
+	
+	free(points);
+	points = newPoints;
+	pointsCount = newPointsCount;
+	
+	kochStep--;
 }
 
 void appendPoint(int x, int y)
