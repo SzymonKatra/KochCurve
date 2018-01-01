@@ -1,11 +1,11 @@
 #include <stdio.h>
+#include <math.h>
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_primitives.h>
 
 #define SCREEN_WIDTH 640
 #define SCREEN_HEIGHT 480
-#define CAMERA_STEP 0.1
-#define CAMERA_SCALE_STEP 0.01
+#define F_EPSILON 0.0001
 
 typedef struct
 {
@@ -33,6 +33,65 @@ void computeCamera(const cameraState_t* camera, ALLEGRO_TRANSFORM* matrix)
 	al_translate_transform(matrix, camera->originX, camera->originY);
 		
 	al_translate_transform(matrix, -camera->x, -camera->y);
+}
+
+float crossProduct(point_t a, point_t b)
+{
+	return a.x * b.y - a.y * b.x;
+}
+// a1 - start of segment A
+// a2 - end of segment A
+// b1 - start of segment B
+// b2 - start of segment B
+int segmentsIntersect(point_t a1, point_t a2, point_t b1, point_t b2)
+{
+	// https://stackoverflow.com/questions/563198/whats-the-most-efficent-way-to-calculate-where-two-line-segments-intersect/565282#565282
+	
+	point_t p = a1;
+	point_t r; // a2 - a1
+	r.x = a2.x - a1.x;
+	r.y = a2.y - a1.y;
+	
+	point_t q = b1;
+	point_t s; // b2 - b1
+	s.x = b2.x - b1.x;
+	s.y = b2.y - b1.y;
+	
+	point_t m; // q - p
+	m.x = q.x - p.x;
+	m.y = q.y - p.y;
+	
+	float cross_rs = crossProduct(r, s);
+	float cross_ms = crossProduct(m, s);
+	float cross_mr = crossProduct(m, r);
+	
+	if (fabsf(cross_rs) < F_EPSILON)
+	{
+		return fabsf(cross_mr) < F_EPSILON;
+	}
+	else
+	{
+		float t = cross_ms / cross_rs;
+		float u = cross_mr / cross_rs;
+		
+		return t >= 0.0f && t <= 1.0f && u >= 0.0f && u <= 1.0f;
+	}
+}
+// a - top-left corner of rectangle
+// b - bottom-right corner of rectangle
+// p - point to check
+int isPointInsideRectangle(point_t a, point_t b, point_t p)
+{
+	return p.x >= a.x && p.x <= b.x && p.y >= a.y && p.y <= b.y;
+}
+int isInsideCamera(point_t cameraBounds[4], point_t a, point_t b)
+{	
+	return (isPointInsideRectangle(cameraBounds[0], cameraBounds[2], a) ||
+			isPointInsideRectangle(cameraBounds[0], cameraBounds[2], b) ||
+			segmentsIntersect(cameraBounds[0], cameraBounds[1], a, b) ||
+			segmentsIntersect(cameraBounds[1], cameraBounds[2], a, b) ||
+			segmentsIntersect(cameraBounds[2], cameraBounds[3], a, b) ||
+			segmentsIntersect(cameraBounds[3], cameraBounds[0], a, b));
 }
 
 int main(int argc, char* args[])
@@ -67,6 +126,16 @@ int main(int argc, char* args[])
 	points[2].y = 0;
 	points[3] = points[0];
 	
+	point_t screenBounds[4];
+	screenBounds[0].x = 0;
+	screenBounds[0].y = 0;
+	screenBounds[1].x = SCREEN_WIDTH;
+	screenBounds[1].y = 0;
+	screenBounds[2].x = SCREEN_WIDTH;
+	screenBounds[2].y = SCREEN_HEIGHT;
+	screenBounds[3].x = 0;
+	screenBounds[3].y = SCREEN_HEIGHT;
+	
 	while (1)
 	{
 		ALLEGRO_EVENT event;
@@ -89,10 +158,14 @@ int main(int argc, char* args[])
 					camera.originY = worldY;
 					
 					float delta = event.mouse.dz;
-					delta /= 10;
+					if (camera.scale < 10) delta /= 5;
+					else if (camera.scale > 500) delta *= 25;
+					else if (camera.scale > 70) delta *= 5;
 					camera.scale += delta;
 					
 					if (camera.scale < 0.1) camera.scale = 0.1;
+					
+					printf("%lf\n", camera.scale);
 					
 					computeCamera(&camera, &transform);
 					al_invert_transform(&transform);
@@ -156,25 +229,17 @@ int main(int argc, char* args[])
 		
 		al_clear_to_color(white);
 		
-		float thickness = 1 / camera.scale;
 		for (int i = 0; i < pointsCount - 1; i++)
 		{
-			/*float x1 = points[i].x;
-			float y1 = points[i].y;
-			float x2 = points[i + 1].x;
-			float y2 = points[i + 1].y;
-			al_transform_coordinates(&cameraMatrix, &x1, &y1);
-			al_transform_coordinates(&cameraMatrix, &x2, &y2);	
+			point_t a = points[i];
+			point_t b = points[i + 1];
+			al_transform_coordinates(&cameraMatrix, &a.x, &a.y);
+			al_transform_coordinates(&cameraMatrix, &b.x, &b.y);	
 			
-			// check bounds
-			int x1Out = x1 < 0 || x1 > SCREEN_WIDTH;
-			int y1Out = y1 < 0 || y1 > SCREEN_HEIGHT;
-			int x2Out = x2 < 0 || x2 > SCREEN_WIDTH;
-			int y2Out = y2 < 0 || y2 > SCREEN_HEIGHT;
-			
-			if (x1Out && y1Out && x2Out && y2Out) continue; // don't draw things for sure not covered by camera*/
-			
-			al_draw_line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y, black, thickness);
+			if (isInsideCamera(screenBounds, a, b))
+			{
+				al_draw_line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y, black, 1.0f / camera.scale);
+			}
 		}
 		
 		al_wait_for_vsync();
