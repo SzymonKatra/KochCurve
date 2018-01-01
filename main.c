@@ -28,7 +28,9 @@ void koch(point_t* output, point_t* input, int count); // koch.asm
 
 void initAll();
 void freeAll();
+void restart();
 void processEvents();
+void drawHud();
 void zoomAt(int mouseX, int mouseY, int value);
 void startMoving(int mouseX, int mouseY);
 void move(int mouseX, int mouseY);
@@ -100,32 +102,7 @@ int main(int argc, char** argv)
 		computeCamera(&hudCamera, &cameraMatrix);
 		al_use_transform(&cameraMatrix);
 		
-		if (!drawing)
-		{
-			char buffer[128];
-			sprintf(buffer, "Step: %d", kochStep);
-			al_draw_text(font, black, 5, 5, ALLEGRO_ALIGN_LEFT, buffer);
-			sprintf(buffer, "Zoom: %.1f", camera.scale);
-			al_draw_text(font, black, 5, 25, ALLEGRO_ALIGN_LEFT, buffer);
-		}
-		else 
-		{
-			if (pointsCount == 0)
-			{
-				al_draw_text(font, black, 5, 5, ALLEGRO_ALIGN_LEFT,  "ESC          - exit");
-				al_draw_text(font, black, 5, 25, ALLEGRO_ALIGN_LEFT, "SPACE        - make step of koch curve");
-				al_draw_text(font, black, 5, 45, ALLEGRO_ALIGN_LEFT, "BACKSPACE    - undo step of koch curve");
-				al_draw_text(font, black, 5, 65, ALLEGRO_ALIGN_LEFT, "Drag & drop with left mouse button");
-				al_draw_text(font, black, 5, 85, ALLEGRO_ALIGN_LEFT, "             - change position of camera");
-				al_draw_text(font, black, 5, 105, ALLEGRO_ALIGN_LEFT, "Mouse scroll - change zoom");
-				al_draw_text(font, red, SCREEN_WIDTH / 2, 205, ALLEGRO_ALIGN_CENTER, "To begin, click right mouse button and start drawing");
-				al_draw_text(font, red, SCREEN_WIDTH / 2, 225, ALLEGRO_ALIGN_CENTER, "initial curve or press SPACE to draw default one.");
-			}
-			else
-			{
-				al_draw_text(font, black, 5, 5, ALLEGRO_ALIGN_LEFT, "Press SPACE to finish drawing");
-			}
-		}
+		drawHud();
 		
 		al_wait_for_vsync();
 		al_flip_display();
@@ -179,9 +156,21 @@ void initAll()
 void freeAll()
 {
 	free(points);
+	points = NULL;
 	al_destroy_font(font);
 	al_destroy_event_queue(queue);
 	al_destroy_display(display);
+}
+
+void restart()
+{
+	initCamera(&camera);
+	
+	moving = 0;
+	kochStep = 0;
+	pointsCount = 0;
+	points = (point_t*)realloc(points, 0);
+	drawing = 1;
 }
 
 void processEvents()
@@ -231,10 +220,43 @@ void processEvents()
 						break;
 						
 					case ALLEGRO_KEY_BACKSPACE: if (!drawing) undoKochStep(); break;
+					
+					case ALLEGRO_KEY_R: restart(); break;
 						
 					case ALLEGRO_KEY_ESCAPE: running = 0; break;
 				}
 				break;
+		}
+	}
+}
+
+void drawHud()
+{
+	if (!drawing)
+	{
+		char buffer[128];
+		sprintf(buffer, "Step: %d", kochStep);
+		al_draw_text(font, black, 5, 5, ALLEGRO_ALIGN_LEFT, buffer);
+		sprintf(buffer, "Zoom: %.1f", camera.scale);
+		al_draw_text(font, black, 5, 25, ALLEGRO_ALIGN_LEFT, buffer);
+	}
+	else 
+	{
+		if (pointsCount == 0)
+		{
+			al_draw_text(font, black, 5, 5, ALLEGRO_ALIGN_LEFT,  "ESC          - exit");
+			al_draw_text(font, black, 5, 25, ALLEGRO_ALIGN_LEFT, "R            - restart");
+			al_draw_text(font, black, 5, 45, ALLEGRO_ALIGN_LEFT, "SPACE        - make step of koch curve");
+			al_draw_text(font, black, 5, 65, ALLEGRO_ALIGN_LEFT, "BACKSPACE    - undo step of koch curve");
+			al_draw_text(font, black, 5, 85, ALLEGRO_ALIGN_LEFT, "Drag & drop with left mouse button");
+			al_draw_text(font, black, 5, 105, ALLEGRO_ALIGN_LEFT, "             - change position of camera");
+			al_draw_text(font, black, 5, 125, ALLEGRO_ALIGN_LEFT, "Mouse scroll - change zoom");
+			al_draw_text(font, red, SCREEN_WIDTH / 2, 205, ALLEGRO_ALIGN_CENTER, "To begin, click right mouse button and start drawing");
+			al_draw_text(font, red, SCREEN_WIDTH / 2, 225, ALLEGRO_ALIGN_CENTER, "initial curve or press SPACE to draw default one.");
+		}
+		else
+		{
+			al_draw_text(font, black, 5, 5, ALLEGRO_ALIGN_LEFT, "Press SPACE to finish drawing");
 		}
 	}
 }
@@ -339,6 +361,7 @@ void applyDefaultCurve()
 	points[3] = points[0];
 }
 
+
 void initCamera(cameraState_t* camera)
 {
 	camera->x = camera->y = camera->originX = camera->originY = 0;
@@ -369,6 +392,7 @@ point_t mouseToWorld(int mouseX, int mouseY)
 	
 	return world;
 }
+
 
 float crossProduct(point_t a, point_t b)
 {

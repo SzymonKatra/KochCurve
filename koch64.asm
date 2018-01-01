@@ -90,7 +90,7 @@ koch_loop:
 				movlps	xmm3, [rsi]		; move Ax, Ay to low part of xmm3
 				addps	xmm2, xmm3		; add A to low vector in xmm2
 				
-				movhlps xmm3, xmm2		; move (sqrt(3) / 6) * Vx), (sqrt(3) / 6) * Vy) to low part of xmm3
+				movhlps xmm3, xmm2		; move (sqrt(3) / 6) * Vx), (sqrt(3) / 6) * Vy) from high part of xmm2 to low part of xmm3
 				addps	xmm2, xmm3		; compute final Q
 										; xmm2 - (low) [Qx, Qy, ---, ---] (high)
 								
