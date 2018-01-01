@@ -33,9 +33,11 @@ void startMoving(int mouseX, int mouseY);
 void move(int mouseX, int mouseY);
 void endMoving(int mouseX, int mouseY);
 void makeKochStep();
+void appendPoint(int x, int y);
 
 void initCamera(cameraState_t* camera);
 void computeCamera(const cameraState_t* camera, ALLEGRO_TRANSFORM* matrix);
+point_t mouseToWorld(int mouseX, int mouseY);
 
 float crossProduct(point_t a, point_t b);
 int segmentsIntersect(point_t a1, point_t a2, point_t b1, point_t b2);
@@ -44,7 +46,7 @@ int isInsideBounds(point_t bounds[4], point_t a, point_t b);
 
 ALLEGRO_DISPLAY* display;
 ALLEGRO_EVENT_QUEUE* queue;
-ALLEGRO_COLOR white, black;
+ALLEGRO_COLOR white, black, red;
 ALLEGRO_FONT* font;
 cameraState_t camera, hudCamera;
 point_t cameraMoveBegin, mouseMoveBegin;
@@ -52,6 +54,7 @@ point_t* points;
 int moving, pointsCount, kochStep;
 point_t screenBounds[4];
 int running;
+int drawing;
 
 int main(int argc, char* args[])
 {
@@ -65,22 +68,46 @@ int main(int argc, char* args[])
 			switch (event.type)
 			{
 				case ALLEGRO_EVENT_MOUSE_AXES: zoomAt(event.mouse.x, event.mouse.y, event.mouse.dz); break;
-				case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN: startMoving(event.mouse.x, event.mouse.y); break;
-				case ALLEGRO_EVENT_MOUSE_BUTTON_UP: endMoving(event.mouse.x, event.mouse.y); break;
+				
+				case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
+					switch (event.mouse.button)
+					{
+						case 1: startMoving(event.mouse.x, event.mouse.y); break;
+						case 2: if (drawing) appendPoint(event.mouse.x, event.mouse.y); break;
+					}	
+					break;
+					
+				case ALLEGRO_EVENT_MOUSE_BUTTON_UP:
+					switch (event.mouse.button)
+					{
+						case 1: endMoving(event.mouse.x, event.mouse.y); break;
+					}	
+					break;
+					
 				case ALLEGRO_EVENT_KEY_DOWN:
 					switch (event.keyboard.keycode)
 					{
-						case ALLEGRO_KEY_SPACE: makeKochStep(); break;
+						case ALLEGRO_KEY_SPACE:
+							if (!drawing)
+							{
+								makeKochStep();
+							}
+							else if (pointsCount > 1)
+							{
+								appendPoint(points[0].x, points[0].y);
+								drawing = 0;
+							}
+							break;
 						case ALLEGRO_KEY_ESCAPE: running = 0; break;
 					}
 					break;
 			}
 		}
-			
+		
+		ALLEGRO_MOUSE_STATE mouseState;
+		al_get_mouse_state(&mouseState);
 		if (moving)
 		{
-			ALLEGRO_MOUSE_STATE mouseState;
-			al_get_mouse_state(&mouseState);
 			move(mouseState.x, mouseState.y);
 		}
 		
@@ -102,6 +129,12 @@ int main(int argc, char* args[])
 			{
 				al_draw_line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y, black, 1.0f / camera.scale);
 			}
+		}
+		
+		if (drawing && pointsCount > 0)
+		{
+			point_t target = mouseToWorld(mouseState.x, mouseState.y);
+			al_draw_line(points[pointsCount - 1].x, points[pointsCount - 1].y, target.x, target.y, red, 1.0f / camera.scale);
 		}
 		
 		computeCamera(&hudCamera, &cameraMatrix);
@@ -138,6 +171,7 @@ void initAll()
 	al_register_event_source(queue, al_get_keyboard_event_source());
 	white = al_map_rgba(255, 255, 255, 255);
 	black = al_map_rgba(0, 0, 0, 255);
+	red = al_map_rgba(255, 0, 0, 255);
 	font = al_load_ttf_font("consola.ttf", 20, 0);
 	
 	initCamera(&camera);
@@ -145,15 +179,15 @@ void initAll()
 	
 	moving = 0;
 	kochStep = 0;
-	pointsCount = 4;
-	points = malloc(sizeof(point_t) * pointsCount);
+	pointsCount = 0;
+	points = (point_t*)malloc(0);
 	points[0].x = -100;
 	points[0].y = 0;
-	points[1].x = 0;
-	points[1].y = 200;
-	points[2].x = 100;
-	points[2].y = 0;
-	points[3] = points[0];
+	//points[1].x = 0;
+	//points[1].y = 200;
+	//points[2].x = 100;
+	//points[2].y = 0;
+	//points[3] = points[0];
 	
 	screenBounds[0].x = 0;
 	screenBounds[0].y = 0;
@@ -164,6 +198,7 @@ void initAll()
 	screenBounds[3].x = 0;
 	screenBounds[3].y = SCREEN_HEIGHT;
 	
+	drawing = 1;
 	running = 1;
 }
 
@@ -218,6 +253,7 @@ void startMoving(int mouseX, int mouseY)
 	mouseMoveBegin.y = mouseY;
 	moving = 1;
 }
+
 void move(int mouseX, int mouseY)
 {
 	float deltaX = mouseMoveBegin.x - mouseX;
@@ -226,11 +262,13 @@ void move(int mouseX, int mouseY)
 	camera.x = cameraMoveBegin.x + deltaX;
 	camera.y = cameraMoveBegin.y + deltaY;
 }
+
 void endMoving(int mouseX, int mouseY)
 {
 	move(mouseX, mouseY);
 	moving = 0;
 }
+
 void makeKochStep()
 {
 	int newPointsCount = (pointsCount - 1) * 4 + 1;
@@ -242,6 +280,16 @@ void makeKochStep()
 	pointsCount = newPointsCount;
 					
 	kochStep++;
+}
+
+void appendPoint(int mouseX, int mouseY)
+{
+	point_t world = mouseToWorld(mouseX, mouseY);
+	
+	pointsCount++;
+	points = (point_t*)realloc(points, sizeof(point_t) * pointsCount);
+	points[pointsCount - 1].x = world.x;
+	points[pointsCount - 1].y = world.y;
 }
 
 void initCamera(cameraState_t* camera)
@@ -259,6 +307,20 @@ void computeCamera(const cameraState_t* camera, ALLEGRO_TRANSFORM* matrix)
 	al_translate_transform(matrix, camera->originX, camera->originY);
 		
 	al_translate_transform(matrix, -camera->x, -camera->y);
+}
+
+point_t mouseToWorld(int mouseX, int mouseY)
+{
+	ALLEGRO_TRANSFORM inverseCameraMatrix;
+	computeCamera(&camera, &inverseCameraMatrix);
+	al_invert_transform(&inverseCameraMatrix);
+			
+	point_t world;
+	world.x = mouseX;
+	world.y = mouseY;
+	al_transform_coordinates(&inverseCameraMatrix, &world.x, &world.y);
+	
+	return world;
 }
 
 float crossProduct(point_t a, point_t b)
