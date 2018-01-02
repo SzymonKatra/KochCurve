@@ -279,7 +279,7 @@ void zoomAt(int mouseX, int mouseY, int value)
 	else if (camera.scale >= 70) delta *= 5;
 	camera.scale += delta;
 					
-	if (camera.scale < 0.1f) camera.scale = 0.1f;
+	if (camera.scale < 0.2f) camera.scale = 0.2f;
 					
 	point_t newWorld = mouseToWorld(mouseX, mouseY);
 					
