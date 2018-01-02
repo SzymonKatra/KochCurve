@@ -1,10 +1,19 @@
 
 global koch
 
-%define CONST_1_2		0x3F000000		; 1/2
-%define CONST_1_3		0x3EAAAAAB		; 1/3
-%define CONST_2_3		0x3F2AAAAB		; 2/3
-%define CONST_SQRT3_6	0x3E93CD3A		; sqrt(3) / 6
+section .data
+
+vec_pr:			dd		0.3333333		; vector with constant
+				dd		0.3333333		; values used to
+				dd		0.6666666		; compute P an R points
+				dd		0.6666666		; [1/3, 1/3, 2/3, 2/3]
+				
+vec_q:			dd		0.5				; vector with constant
+				dd		0.5				; values used to
+				dd 		0.2886751		; compute Q point
+				dd		0.2886751		; [1/2, 1/2, sqrt(3) / 6, sqrt(3) / 6]
+
+section .text
 
 %define ARG_OUT			ebp + 8			; address of pointer to output buffer
 %define ARG_IN			ebp + 12		; address of pointer to input buffer
@@ -60,13 +69,7 @@ koch_loop:
 				movaps	xmm1, xmm0		; move Ux, Uy to xmm1 (moved also high part but we don't care)
 				movlhps	xmm1, xmm0		; move Ux, Uy to high part of xmm1
 				
-				mov		dword [VAR_TMP8], CONST_1_3 ; move 1/3 to temp buffer
-				mov		dword [VAR_TMP8 + 4], CONST_1_3 ; move 1/3 to temp buffer
-				movlps	xmm2, [VAR_TMP8] ; move [1/3, 1/3] to low part of xmm2
-				
-				mov		dword [VAR_TMP8], CONST_2_3 ; move 2/3 to temp buffer
-				mov		dword [VAR_TMP8 + 4], CONST_2_3 ; move 2/3 to temp buffer
-				movhps	xmm2, [VAR_TMP8]; move [2/3, 2/3] to high part of xmm2
+				movups	xmm2, [vec_pr]	; move [1/3, 1/3, 2/3, 2/3] to xmm2
 				
 				mulps	xmm1, xmm2		; multiply U and V by appropriate factors
 										; xmm1 - (low) [1/3 * Ux, 1/3 * Uy, 2/3 * Vx, 2/3 * Vy] (high)
@@ -80,13 +83,7 @@ koch_loop:
 										; --- COMPUTE Q ---
 				movaps	xmm2, xmm0		; move Ux, Uy, Vx, Vy to xmm2
 				
-				mov		dword [VAR_TMP8], CONST_1_2 ; move 1/2 to temp buffer
-				mov		dword [VAR_TMP8 + 4], CONST_1_2 ; move 1/2 to temp buffer
-				movlps	xmm3, [VAR_TMP8] ; move [1/2, 1/2] to low part of xmm3
-				
-				mov		dword [VAR_TMP8], CONST_SQRT3_6 ; move sqrt(3) / 6 to temp buffer
-				mov		dword [VAR_TMP8 + 4], CONST_SQRT3_6 ; move sqrt(3) / 6 to temp buffer
-				movhps	xmm3, [VAR_TMP8]; move [sqrt(3) / 6, sqrt(3) / 6] to high part of xmm3
+				movups	xmm3, [vec_q]	; move [1/2, 1/2, sqrt(3) / 6, sqrt(3) / 6] to xmm3
 				
 				mulps	xmm2, xmm3		; multiply by appropriate factors
 										; xmm2 - (low) [1/2 * Ux, 1/2 * Uy, (sqrt(3) / 6) * Vx, (sqrt(3) / 6) * Vy] (high)
