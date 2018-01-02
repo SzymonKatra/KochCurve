@@ -127,6 +127,7 @@ void initAll()
 	queue = al_create_event_queue();
 	al_register_event_source(queue, al_get_mouse_event_source());
 	al_register_event_source(queue, al_get_keyboard_event_source());
+	al_register_event_source(queue, al_get_display_event_source(display));
 	white = al_map_rgba(255, 255, 255, 255);
 	black = al_map_rgba(0, 0, 0, 255);
 	red = al_map_rgba(255, 0, 0, 255);
@@ -226,6 +227,8 @@ void processEvents()
 					case ALLEGRO_KEY_ESCAPE: running = 0; break;
 				}
 				break;
+				
+			case ALLEGRO_EVENT_DISPLAY_CLOSE: running = 0; break;
 		}
 	}
 }
