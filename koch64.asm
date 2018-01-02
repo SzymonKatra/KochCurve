@@ -6,8 +6,8 @@ default rel
 section .data
 vec_pr:			dd		0.3333333		; vector with constant
 				dd		0.3333333		; values used to
-				dd		0.6666666		; compute P an R points
-				dd		0.6666666		; [1/3, 1/3, 2/3, 2/3]
+				dd		0.6666667		; compute P an R points
+				dd		0.6666667		; [1/3, 1/3, 2/3, 2/3]
 				
 vec_q:			dd		0.5				; vector with constant
 				dd		0.5				; values used to
