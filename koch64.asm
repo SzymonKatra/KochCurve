@@ -4,6 +4,7 @@ global koch
 default rel
 
 section .data
+
 vec_pr:			dd		0.3333333		; vector with constant
 				dd		0.3333333		; values used to
 				dd		0.6666667		; compute P an R points
@@ -19,12 +20,10 @@ section .text
 ; rdi - pointer to output buffer
 ; rsi - pointer to input buffer
 ; rdx - input points count
-%define VAR_TMP8		rbp - 8			; temporary 8 byte buffer
 koch:		
 										; --- PROLOGUE ---
 				push	rbp				; preserve frame pointer
 				mov		rbp, rsp		; set up new frame pointer
-				sub		rsp, 8			; allocate local variables
 				
 										; Symbols:
 										; A - start point
@@ -48,12 +47,14 @@ koch:
 				
 koch_loop:
 										; --- COMPUTE U AND V ---
-				movlps	xmm0, [rsi + 8] ; move Bx, By to low part of xmm0
-				mov		eax, [rsi + 12] ; store temporarily By in eax
-				mov		[VAR_TMP8], eax ; move By to temp buffer
 				mov		eax, [rsi]		; store temporarily Ax in eax
-				mov		[VAR_TMP8 + 4], eax ; move Ax into temp buffer
-				movhps	xmm0, [VAR_TMP8] ; Move By, Ax to high part of xmm0
+				sal		rax, 32			; shift Ax to high part of rax
+				mov		ecx, [rsi + 12] ; store temporarily By in ecx
+				or		rax, rcx		; high part of rax contains now Ax, and low part contains By
+				movq	xmm0, rax		; store temporarily By, Ax in low part of xmm0
+				movlhps	xmm0, xmm0		; move By, Ax to high part of xmm0
+										
+				movlps	xmm0, [rsi + 8] ; move Bx, By to low part of xmm0
 				
 				movlps	xmm1, [rsi]		; move Ax, Ay to low part of xmm1
 				movhps	xmm1, [rsi + 4]	; move Ay, Bx to high part of xmm1
@@ -113,4 +114,3 @@ koch_loop:
 				mov		rsp, rbp		; restore stack pointer
 				pop		rbp				; restore frame pointer
 				ret
-%undef	VAR_TMP8
