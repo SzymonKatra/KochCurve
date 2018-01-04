@@ -55,7 +55,6 @@ koch_loop:
 				movups	xmm0, [esi]		; move Ax, Ay, Bx, By to xmm0
 				shufps	xmm0, xmm0, 00111110b ; shuffle xmm0 to (low) [Bx, By, By, Ax] (high)
 				
-				
 				movlps	xmm1, [esi]		; move Ax, Ay to low part of xmm1
 				movhps	xmm1, [esi + 4]	; move Ay, Bx to high part of xmm1
 				
