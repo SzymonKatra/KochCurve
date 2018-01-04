@@ -12,18 +12,18 @@ vec_q:			dd		0.5				; vector with constant
 				dd		0.5				; values used to
 				dd 		0.2886751		; compute Q point
 				dd		0.2886751		; [1/2, 1/2, sqrt(3) / 6, sqrt(3) / 6]
+				
+aaa: db 'x\n',0
 
 section .text
 
 %define ARG_OUT			ebp + 8			; address of pointer to output buffer
 %define ARG_IN			ebp + 12		; address of pointer to input buffer
 %define ARG_COUNT		ebp + 16		; address of input points count
-%define VAR_TMP8		ebp - 8			; temporary 8 byte buffer
 koch:		
 										; --- PROLOGUE ---
 				push	ebp				; preserve frame pointer
 				mov		ebp, esp		; set up new frame pointer
-				sub		esp, 8			; allocate local variables
 				push	esi				; preserve esi
 				push	edi				; preserve edi
 				
@@ -52,12 +52,9 @@ koch:
 				
 koch_loop:
 										; --- COMPUTE U AND V ---
-				movlps	xmm0, [esi + 8] ; move Bx, By to low part of xmm0
-				mov		eax, [esi + 12] ; store temporarily By in eax
-				mov		[VAR_TMP8], eax ; move By to temp buffer
-				mov		eax, [esi]		; store temporarily Ax in eax
-				mov		[VAR_TMP8 + 4], eax ; move Ax into temp buffer
-				movhps	xmm0, [VAR_TMP8] ; Move By, Ax to high part of xmm0
+				movups	xmm0, [esi]		; move Ax, Ay, Bx, By to xmm0
+				shufps	xmm0, xmm0, 00111110b ; shuffle xmm0 to (low) [Bx, By, By, Ax] (high)
+				
 				
 				movlps	xmm1, [esi]		; move Ax, Ay to low part of xmm1
 				movhps	xmm1, [esi + 4]	; move Ay, Bx to high part of xmm1
@@ -122,4 +119,3 @@ koch_loop:
 %undef	ARG_IN
 %undef	ARG_OUT
 %undef	ARG_COUNT
-%undef	VAR_TMP8

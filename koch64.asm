@@ -47,14 +47,8 @@ koch:
 				
 koch_loop:
 										; --- COMPUTE U AND V ---
-				mov		eax, [rsi]		; store temporarily Ax in eax
-				sal		rax, 32			; shift Ax to high part of rax
-				mov		ecx, [rsi + 12] ; store temporarily By in ecx
-				or		rax, rcx		; high part of rax contains now Ax, and low part contains By
-				movq	xmm0, rax		; store temporarily By, Ax in low part of xmm0
-				movlhps	xmm0, xmm0		; move By, Ax to high part of xmm0
-										
-				movlps	xmm0, [rsi + 8] ; move Bx, By to low part of xmm0
+				movups	xmm0, [rsi]		; move Ax, Ay, Bx, By to xmm0
+				shufps	xmm0, xmm0, 00111110b ; shuffle xmm0 to (low) [Bx, By, By, Ax] (high)
 				
 				movlps	xmm1, [rsi]		; move Ax, Ay to low part of xmm1
 				movhps	xmm1, [rsi + 4]	; move Ay, Bx to high part of xmm1
