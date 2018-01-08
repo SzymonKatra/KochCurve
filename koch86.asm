@@ -12,8 +12,6 @@ vec_q:			dd		0.5				; vector with constant
 				dd		0.5				; values used to
 				dd 		0.2886751		; compute Q point
 				dd		0.2886751		; [1/2, 1/2, sqrt(3) / 6, sqrt(3) / 6]
-				
-aaa: db 'x\n',0
 
 section .text
 
