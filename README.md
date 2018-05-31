@@ -7,8 +7,8 @@ Written in C with Allegro5 support and assembly (both x86 and x86_64). Algorithm
 
 ## Build
 Use makefile, provides support for compiling 32 and 64 bit version.  
-```make``` or ```make 64```- compile for x86_64, generates *main64* executable  
-```make 86``` - compile for x86, generates *main86* executable
+```make``` or ```make 64```- compile for x86_64, generates *bin/main64* executable  
+```make 86``` - compile for x86, generates *bin/main86* executable
 
 Prerequisites to compile:
 - gcc
